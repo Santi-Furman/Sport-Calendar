@@ -8,7 +8,6 @@ import {
   Trophy, 
   Trash2,
   Calendar as CalendarIcon,
-  Flame,
   RotateCcw
 } from 'lucide-react';
 
@@ -58,6 +57,11 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
   
+  // Gestos de Swipe
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  // Persistencia local
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem('sports_calendar_logs');
     return saved ? JSON.parse(saved) : {
@@ -80,6 +84,31 @@ export default function App() {
   const goToToday = () => {
     setCurrentDate(new Date());
     setSelectedDateStr(todayStr);
+  };
+
+  // Lógica para detectar gestos de deslizar (Swipe)
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      nextMonth();
+    } else if (isRightSwipe) {
+      prevMonth();
+    }
   };
 
   const year = currentDate.getFullYear();
@@ -143,7 +172,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 font-sans antialiased">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 font-sans antialiased select-none">
       <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-5 shadow-2xl">
         
         {/* Cabecera del Mes y Botón 'Hoy' */}
@@ -157,7 +186,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button 
               onClick={goToToday}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all flex items-center gap-1"
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all flex items-center gap-1 active:scale-95"
             >
               <RotateCcw className="w-3 h-3" /> Hoy
             </button>
@@ -173,17 +202,17 @@ export default function App() {
         </div>
 
         {/* Resumen de actividad del mes */}
-        <div className="grid grid-cols-3 gap-2 mb-5 p-2 bg-slate-950/40 rounded-xl border border-slate-800/50 text-center">
+        <div className="grid grid-cols-3 gap-2 mb-4 p-2.5 bg-slate-950/40 rounded-2xl border border-slate-800/50 text-center">
           <div>
-            <span className="text-xs text-slate-400 block">Gym</span>
+            <span className="text-[11px] text-slate-400 block font-medium">Gimnasio</span>
             <span className="text-sm font-bold text-indigo-400">{stats.gymCount}d</span>
           </div>
           <div>
-            <span className="text-xs text-slate-400 block">Práctica</span>
+            <span className="text-[11px] text-slate-400 block font-medium">Práctica</span>
             <span className="text-sm font-bold text-emerald-400">{stats.practiceCount}d</span>
           </div>
           <div>
-            <span className="text-xs text-slate-400 block">Partidos</span>
+            <span className="text-[11px] text-slate-400 block font-medium">Partidos</span>
             <span className="text-sm font-bold text-amber-400">{stats.matchCount}d</span>
           </div>
         </div>
@@ -197,8 +226,13 @@ export default function App() {
           ))}
         </div>
 
-        {/* Grilla del Calendario */}
-        <div className="grid grid-cols-7 gap-1.5 mb-5">
+        {/* Grilla del Calendario (Con detección de Swipe para móvil) */}
+        <div 
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="grid grid-cols-7 gap-1.5 mb-5"
+        >
           {Array.from({ length: startingDayIndex }).map((_, i) => (
             <div key={`empty-${i}`} className="h-11 rounded-xl bg-slate-950/20" />
           ))}
@@ -244,7 +278,7 @@ export default function App() {
             {(logs[selectedDateStr] || []).length > 0 && (
               <button
                 onClick={clearDay}
-                className="text-xs text-rose-400/80 hover:text-rose-400 flex items-center gap-1"
+                className="text-xs text-rose-400/80 hover:text-rose-400 flex items-center gap-1 transition-colors"
               >
                 <Trash2 className="w-3 h-3" /> Limpiar
               </button>
@@ -260,7 +294,7 @@ export default function App() {
                 <button
                   key={act.id}
                   onClick={() => toggleActivity(act.id)}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition-all active:scale-[0.99] ${
                     isActive 
                       ? `${act.color} font-medium` 
                       : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700'
