@@ -20,18 +20,8 @@ export default function App() {
   const [notes, setNotes] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  // 1. Capturar la redirección de Google + escuchar el estado del usuario
+  // 1. Escuchar el estado de autenticación de Firebase en tiempo real
   useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          setUser(result.user);
-        }
-      })
-      .catch((error) => {
-        console.error("Error al procesar el retorno de Google:", error);
-      });
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoadingAuth(false);
@@ -54,6 +44,7 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
+  // Login con ventana emergente (Popup)
   const handleGoogleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
