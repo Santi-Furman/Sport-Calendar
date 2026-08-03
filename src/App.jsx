@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { auth, googleProvider, db } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { Plus, Trash2, Calendar as CalendarIcon, Trophy, Clock, Tag, LogIn, LogOut, ChevronLeft, ChevronRight, Flame, BarChart3, Settings, Edit3, X, Check } from 'lucide-react';
+import { Plus, Trash2, Calendar as CalendarIcon, Trophy, Clock, Tag, LogIn, LogOut, ChevronLeft, ChevronRight, Flame, BarChart3, Settings, Edit3 } from 'lucide-react';
 
 // Actividades por defecto
 const DEFAULT_SPORTS = [
@@ -94,7 +94,11 @@ export default function App() {
     }
   };
 
+  // CONFIRMACIÓN: Cerrar sesión
   const handleLogout = async () => {
+    const confirmed = window.confirm("¿Estás seguro de que deseas cerrar sesión?");
+    if (!confirmed) return;
+
     try {
       await signOut(auth);
     } catch (error) {
@@ -129,7 +133,11 @@ export default function App() {
     }
   };
 
-  const handleDelete = async (id) => {
+  // CONFIRMACIÓN: Eliminar un evento
+  const handleDelete = async (id, eventTitle) => {
+    const confirmed = window.confirm(`¿Estás seguro de que deseas eliminar el evento "${eventTitle || 'seleccionado'}"?`);
+    if (!confirmed) return;
+
     try {
       await deleteDoc(doc(db, 'events', id));
     } catch (error) {
@@ -162,15 +170,26 @@ export default function App() {
     setNewSportColor(sport.color);
   };
 
-  const handleDeleteSport = (id) => {
+  // CONFIRMACIÓN: Eliminar una actividad
+  const handleDeleteSport = (sport) => {
     if (customSports.length <= 1) {
       alert("Debes tener al menos una actividad registrada.");
       return;
     }
-    setCustomSports(prev => prev.filter(s => s.id !== id));
+
+    const confirmed = window.confirm(
+      `¿Seguro que deseas eliminar la actividad "${sport.label}"?\n\n(Los eventos ya guardados mantendrán sus registros pero ya no podrás elegir esta actividad para nuevos eventos).`
+    );
+    if (!confirmed) return;
+
+    setCustomSports(prev => prev.filter(s => s.id !== sport.id));
+    if (sportId === sport.id) {
+      const remaining = customSports.filter(s => s.id !== sport.id);
+      if (remaining.length > 0) setSportId(remaining[0].id);
+    }
   };
 
-  // Cálculo de Rachas y Estadísticas
+  // Cálculo de Rachas
   const uniqueDatesWithEvents = Array.from(new Set(events.map(e => e.date))).sort().reverse();
   
   const calculateStreak = () => {
@@ -182,7 +201,6 @@ export default function App() {
 
     let checkDate = new Date(today);
 
-    // Verificar si hoy o ayer hay actividad para mantener la racha viva
     const todayStr = checkDate.toISOString().split('T')[0];
     checkDate.setDate(checkDate.getDate() - 1);
     const yesterdayStr = checkDate.toISOString().split('T')[0];
@@ -496,8 +514,9 @@ export default function App() {
                           </div>
 
                           <button
-                            onClick={() => handleDelete(event.id)}
+                            onClick={() => handleDelete(event.id, event.title)}
                             className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                            title="Eliminar evento"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -586,13 +605,13 @@ export default function App() {
 
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Emoji</label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto pb-1">
                       {['⚽', '🎯', '🏋️‍♂️', '🏃‍♂️', '🏊‍♂️', '🎾', '🥊', '🚴‍♂️', '🧘‍♀️', '🏀', '🔥'].map((emoji) => (
                         <button
                           key={emoji}
                           type="button"
                           onClick={() => setNewSportEmoji(emoji)}
-                          className={`p-2 rounded-lg text-lg border ${newSportEmoji === emoji ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-950 border-slate-800'}`}
+                          className={`p-2 rounded-lg text-lg border transition-colors ${newSportEmoji === emoji ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-950 border-slate-800'}`}
                         >
                           {emoji}
                         </button>
@@ -649,12 +668,14 @@ export default function App() {
                           <button
                             onClick={() => handleEditSportClick(sport)}
                             className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg"
+                            title="Editar actividad"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteSport(sport.id)}
+                            onClick={() => handleDeleteSport(sport)}
                             className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg"
+                            title="Eliminar actividad"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
