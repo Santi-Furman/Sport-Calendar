@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { auth, googleProvider, db } from './firebase';
-import { signInWithRedirect, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithRedirect, signOut, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { Plus, Trash2, Calendar as CalendarIcon, Trophy, Clock, Tag, LogIn, LogOut, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Plus, Trash2, Calendar as CalendarIcon, Trophy, Clock, Tag, LogIn, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -20,16 +20,27 @@ export default function App() {
   const [notes, setNotes] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  // 1. Escuchar sesión de usuario
+  // 1. Capturar la redirección de Google + escuchar el estado del usuario
   useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setUser(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error("Error al procesar el retorno de Google:", error);
+      });
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoadingAuth(false);
     });
+
     return () => unsubscribe();
   }, []);
 
-  // 2. Escuchar eventos de Firestore
+  // 2. Escuchar eventos de Firestore cuando el usuario está autenticado
   useEffect(() => {
     if (!user) {
       setEvents([]);
@@ -99,7 +110,6 @@ export default function App() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayIndex = new Date(year, month, 1).getDay();
 
-  // Ajustar día de la semana (0 = Domingo -> hacer que Lunes sea 0 si prefieres)
   const monthNames = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
