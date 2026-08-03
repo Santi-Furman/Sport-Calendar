@@ -4,6 +4,16 @@ import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { Plus, Trash2, Calendar as CalendarIcon, Trophy, Clock, Tag, LogIn, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 
+// Configuración de colores y emojis por actividad
+const SPORT_CONFIG = {
+  'Partido': { emoji: '⚽', label: 'Partido', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40', badge: 'bg-emerald-950 text-emerald-400 border-emerald-800/50', dayBg: 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30' },
+  'Práctica': { emoji: '🎯', label: 'Práctica', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40', badge: 'bg-cyan-950 text-cyan-400 border-cyan-800/50', dayBg: 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30' },
+  'Gimnasio': { emoji: '🏋️‍♂️', label: 'Gimnasio', color: 'bg-purple-500/20 text-purple-400 border-purple-500/40', badge: 'bg-purple-950 text-purple-400 border-purple-800/50', dayBg: 'bg-purple-950/60 text-purple-300 border border-purple-500/30' },
+  'Running': { emoji: '🏃‍♂️', label: 'Running', color: 'bg-amber-500/20 text-amber-400 border-amber-500/40', badge: 'bg-amber-950 text-amber-400 border-amber-800/50', dayBg: 'bg-amber-950/60 text-amber-300 border border-amber-500/30' },
+  'Natación': { emoji: '🏊‍♂️', label: 'Natación', color: 'bg-blue-500/20 text-blue-400 border-blue-500/40', badge: 'bg-blue-950 text-blue-400 border-blue-800/50', dayBg: 'bg-blue-950/60 text-blue-300 border border-blue-500/30' },
+  'Otro': { emoji: '🔥', label: 'Otro', color: 'bg-slate-500/20 text-slate-400 border-slate-500/40', badge: 'bg-slate-900 text-slate-400 border-slate-700/50', dayBg: 'bg-slate-800/60 text-slate-300 border border-slate-700/40' }
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -16,21 +26,20 @@ export default function App() {
   // Formulario
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
-  const [sport, setSport] = useState('Gimnasio');
+  const [sport, setSport] = useState('Partido');
   const [notes, setNotes] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  // 1. Escuchar el estado de autenticación de Firebase en tiempo real
+  // 1. Escuchar el estado de autenticación
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoadingAuth(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // 2. Escuchar eventos de Firestore cuando el usuario está autenticado
+  // 2. Escuchar eventos de Firestore
   useEffect(() => {
     if (!user) {
       setEvents([]);
@@ -44,7 +53,6 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // Login con ventana emergente (Popup)
   const handleGoogleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -65,12 +73,15 @@ export default function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !user) return;
+    if (!user) return;
+
+    // Si no pone título explícito, usamos la categoría por defecto
+    const eventTitle = title.trim() || sport;
 
     try {
       await addDoc(collection(db, 'events'), {
         userId: user.uid,
-        title,
+        title: eventTitle,
         date: selectedDateStr,
         time: time || '12:00',
         sport,
@@ -80,11 +91,11 @@ export default function App() {
 
       setTitle('');
       setTime('');
-      setSport('Gimnasio');
+      setSport('Partido');
       setNotes('');
       setShowForm(false);
     } catch (error) {
-      console.error("Error guardando en la nube:", error);
+      console.error("Error guardando evento:", error);
     }
   };
 
@@ -92,11 +103,11 @@ export default function App() {
     try {
       await deleteDoc(doc(db, 'events', id));
     } catch (error) {
-      console.error("Error borrando en la nube:", error);
+      console.error("Error borrando evento:", error);
     }
   };
 
-  // Lógica para construir la retícula del calendario
+  // Lógica de fechas
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -117,7 +128,6 @@ export default function App() {
     return `${year}-${m}-${d}`;
   };
 
-  // Eventos para la fecha seleccionada actualmente
   const selectedDateEvents = events.filter(e => e.date === selectedDateStr);
 
   if (loadingAuth) {
@@ -168,7 +178,7 @@ export default function App() {
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-white">¡Bienvenido a tu Sport Calendar!</h2>
               <p className="text-sm text-slate-400">
-                Inicia sesión para sincronizar tus partidos, entrenamientos y eventos en todos tus dispositivos.
+                Inicia sesión para sincronizar tus partidos, prácticas y entrenamientos en todos tus dispositivos.
               </p>
             </div>
             <button
@@ -204,10 +214,10 @@ export default function App() {
               </div>
 
               {/* Retícula del Mes */}
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {/* Días vacíos de relleno antes del día 1 */}
+              <div className="grid grid-cols-7 gap-1.5 text-center">
+                {/* Relleno inicial */}
                 {Array.from({ length: firstDayIndex }).map((_, i) => (
-                  <div key={`empty-${i}`} className="h-9" />
+                  <div key={`empty-${i}`} className="h-12" />
                 ))}
 
                 {/* Días del mes */}
@@ -215,21 +225,38 @@ export default function App() {
                   const dayNum = i + 1;
                   const dateStr = formatDayString(dayNum);
                   const isSelected = dateStr === selectedDateStr;
-                  const hasEvents = events.some(e => e.date === dateStr);
+                  const dayEvents = events.filter(e => e.date === dateStr);
+                  const hasEvents = dayEvents.length > 0;
+
+                  // Determinar el estilo del día según la primera actividad registrada
+                  let dayStyle = "bg-slate-950/40 text-slate-300 hover:bg-slate-800/80 border border-transparent";
+                  
+                  if (hasEvents) {
+                    const firstSport = dayEvents[0].sport;
+                    const config = SPORT_CONFIG[firstSport] || SPORT_CONFIG['Otro'];
+                    dayStyle = config.dayBg;
+                  }
+
+                  if (isSelected) {
+                    dayStyle += " ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-950 font-bold scale-[1.02]";
+                  }
 
                   return (
                     <button
                       key={dayNum}
                       onClick={() => setSelectedDateStr(dateStr)}
-                      className={`h-9 rounded-lg text-xs font-medium relative flex flex-col items-center justify-center transition-all ${
-                        isSelected
-                          ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/40'
-                          : 'hover:bg-slate-800 text-slate-300'
-                      }`}
+                      className={`h-12 rounded-xl text-xs font-medium transition-all flex flex-col items-center justify-between p-1.5 relative overflow-hidden ${dayStyle}`}
                     >
-                      <span>{dayNum}</span>
+                      <span className="leading-none">{dayNum}</span>
+
+                      {/* Emojis de las actividades del día */}
                       {hasEvents && (
-                        <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-indigo-400'}`} />
+                        <div className="flex items-center justify-center gap-0.5 text-sm overflow-hidden w-full">
+                          {dayEvents.slice(0, 2).map((ev, idx) => {
+                            const cfg = SPORT_CONFIG[ev.sport] || SPORT_CONFIG['Otro'];
+                            return <span key={idx}>{cfg.emoji}</span>;
+                          })}
+                        </div>
                       )}
                     </button>
                   );
@@ -237,19 +264,44 @@ export default function App() {
               </div>
             </div>
 
-            {/* Formulario Modal para la fecha seleccionada */}
+            {/* Formulario Modal */}
             {showForm && (
               <form onSubmit={handleSubmit} className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4 shadow-xl">
-                <h2 className="text-lg font-semibold text-white mb-2">
-                  Nuevo Evento ({selectedDateStr})
+                <h2 className="text-lg font-semibold text-white mb-1">
+                  Cargar Actividad ({selectedDateStr})
                 </h2>
-                
+
+                {/* Selección directa con un clic (Botones de Actividad) */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Nombre / Título</label>
+                  <label className="block text-xs font-medium text-slate-400 mb-2">Selecciona la actividad:</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Object.keys(SPORT_CONFIG).map((sportKey) => {
+                      const item = SPORT_CONFIG[sportKey];
+                      const isSelected = sport === sportKey;
+                      return (
+                        <button
+                          key={sportKey}
+                          type="button"
+                          onClick={() => setSport(sportKey)}
+                          className={`flex items-center justify-center gap-1.5 p-2 rounded-lg text-xs font-medium border transition-all ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-400 shadow-md shadow-indigo-600/30 font-bold'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <span>{item.emoji}</span>
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Título / Nombre (Opcional)</label>
                   <input
                     type="text"
-                    required
-                    placeholder="Ej. Partido vs Rival, Rutina Piernas"
+                    placeholder={`Ej: ${SPORT_CONFIG[sport]?.label || 'Partido'}`}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
@@ -267,28 +319,12 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Deporte / Categoría</label>
-                  <select
-                    value={sport}
-                    onChange={(e) => setSport(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="Gimnasio">🏋️‍♂️ Gimnasio</option>
-                    <option value="Fútbol">⚽ Fútbol</option>
-                    <option value="Running">🏃‍♂️ Running</option>
-                    <option value="Basquetbol">🏀 Basquetbol</option>
-                    <option value="Natación">🏊‍♂️ Natación</option>
-                    <option value="Otro">🎯 Otro</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Notas adicionales</label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Notas adicionales (Opcional)</label>
                   <textarea
-                    placeholder="Detalles, equipamiento, lugar..."
+                    placeholder="Lugar, rival, observaciones..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none h-20"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none h-16"
                   />
                 </div>
 
@@ -322,32 +358,35 @@ export default function App() {
                   <p className="text-xs">No hay eventos para este día.</p>
                 </div>
               ) : (
-                selectedDateEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex justify-between items-start gap-3"
-                  >
-                    <div className="space-y-1.5 flex-1">
-                      <span className="bg-indigo-950 text-indigo-400 text-xs px-2.5 py-0.5 rounded-full font-medium border border-indigo-800/50 inline-flex items-center gap-1">
-                        <Tag className="w-3 h-3" />
-                        {event.sport}
-                      </span>
-                      <h4 className="font-semibold text-white text-base">{event.title}</h4>
-                      <p className="text-xs text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-500" />
-                        {event.time} hs
-                      </p>
-                      {event.notes && <p className="text-xs text-slate-400 pt-1 border-t border-slate-800/60 mt-2">{event.notes}</p>}
-                    </div>
-
-                    <button
-                      onClick={() => handleDelete(event.id)}
-                      className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                selectedDateEvents.map((event) => {
+                  const cfg = SPORT_CONFIG[event.sport] || SPORT_CONFIG['Otro'];
+                  return (
+                    <div
+                      key={event.id}
+                      className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex justify-between items-start gap-3"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))
+                      <div className="space-y-1.5 flex-1">
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border inline-flex items-center gap-1 ${cfg.badge}`}>
+                          <Tag className="w-3 h-3" />
+                          {cfg.emoji} {cfg.label}
+                        </span>
+                        <h4 className="font-semibold text-white text-base">{event.title}</h4>
+                        <p className="text-xs text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-slate-500" />
+                          {event.time} hs
+                        </p>
+                        {event.notes && <p className="text-xs text-slate-400 pt-1 border-t border-slate-800/60 mt-2">{event.notes}</p>}
+                      </div>
+
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </section>
           </>
