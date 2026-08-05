@@ -1,100 +1,126 @@
-import React, { useState } from 'react';
+// src/components/forms/EventForm.jsx
+import React, { useState, useEffect } from 'react';
+import { X, Clock, FileText, Activity } from 'lucide-react';
 
-export default function EventForm({ selectedDateStr, sports, onSubmit, onClose }) {
-  const [sportId, setSportId] = useState(sports[0]?.id || '');
-  const [title, setTitle] = useState('');
-  const [time, setTime] = useState('');
+export default function EventForm({
+  isOpen,
+  onClose,
+  onSubmit,
+  sports = [],
+  initialData = null // Si viene un objeto, está Editando. Si es null, creando.
+}) {
+  const [sport, setSport] = useState('');
+  const [duration, setDuration] = useState(30);
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (initialData) {
+      setSport(initialData.sport || initialData.sportId || sports[0]?.id || '');
+      setDuration(initialData.duration || 30);
+      setNotes(initialData.notes || '');
+    } else {
+      setSport(sports[0]?.id || '');
+      setDuration(30);
+      setNotes('');
+    }
+  }, [initialData, sports, isOpen]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const selectedSportObj = sports.find(s => s.id === sportId) || sports[0];
-    const eventTitle = title.trim() || selectedSportObj.label;
+    if (!sport) return;
 
     onSubmit({
-      title: eventTitle,
-      date: selectedDateStr,
-      time: time || '12:00',
-      sport: selectedSportObj.id,
-      notes
+      sport,
+      duration: Number(duration),
+      notes,
+      ...(initialData ? { id: initialData.id } : {})
     });
-
     onClose();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-4 shadow-xl">
-      <h2 className="text-lg font-semibold text-white mb-1">
-        Cargar Actividad ({selectedDateStr})
-      </h2>
-
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-2">Selecciona la actividad:</label>
-        <div className="grid grid-cols-3 gap-2">
-          {sports.map((sport) => (
-            <button
-              key={sport.id}
-              type="button"
-              onClick={() => setSportId(sport.id)}
-              className={`flex items-center justify-center gap-1.5 p-2 rounded-lg text-xs font-medium border transition-all ${
-                sportId === sport.id
-                  ? 'bg-indigo-600 text-white border-indigo-400 font-bold'
-                  : 'bg-slate-950 text-slate-400 border-slate-800'
-              }`}
-            >
-              <span>{sport.emoji}</span>
-              <span>{sport.label}</span>
-            </button>
-          ))}
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-lg font-bold text-white">
+            {initialData ? 'Editar Actividad Registrada' : 'Registrar Actividad'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">Título / Nombre (Opcional)</label>
-        <input
-          type="text"
-          placeholder={`Ej: ${sports.find(s => s.id === sportId)?.label || 'Partido'}`}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
-        />
-      </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Categoría</label>
+            <div className="relative">
+              <Activity className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <select
+                value={sport}
+                onChange={(e) => setSport(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-indigo-500"
+              >
+                {sports.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.emoji} {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">Hora</label>
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
-        />
-      </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Duración (minutos)</label>
+            <div className="relative">
+              <Clock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <input
+                type="number"
+                min="1"
+                max="1440"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-indigo-500"
+                required
+              />
+            </div>
+          </div>
 
-      <div>
-        <label className="block text-xs font-medium text-slate-400 mb-1">Notas adicionales (Opcional)</label>
-        <textarea
-          placeholder="Lugar, rival, observaciones..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none h-16"
-        />
-      </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Notas (Opcional)</label>
+            <div className="relative">
+              <FileText className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows="3"
+                placeholder="Ej. Buenas sensaciones en el entrenamiento..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pl-9 pr-3 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none"
+              />
+            </div>
+          </div>
 
-      <div className="flex gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-sm font-semibold transition-colors shadow-md shadow-indigo-600/30"
-        >
-          Guardar
-        </button>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors"
+            >
+              {initialData ? 'Guardar Cambios' : 'Registrar'}
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }

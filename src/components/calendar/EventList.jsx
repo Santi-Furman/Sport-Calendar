@@ -1,55 +1,100 @@
+// src/components/calendar/EventList.jsx
 import React from 'react';
-import { Calendar as CalendarIcon, Tag, Clock, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Clock, FileText } from 'lucide-react';
 import { COLOR_MAP } from '../../constants/sportsData';
 
-export default function EventList({ selectedDateStr, events, sports, onDeleteEvent }) {
+export default function EventList({
+  selectedDateStr,
+  events,
+  sports,
+  onOpenForm,
+  onEditEvent,
+  onDeleteEvent
+}) {
   const dayEvents = events[selectedDateStr] || [];
 
+  const getSportInfo = (sportKey) => {
+    return sports.find(s => s.id === sportKey || s.label?.toLowerCase() === sportKey?.toLowerCase()) || {
+      label: 'Actividad',
+      emoji: '🏆',
+      color: 'bg-purple-500'
+    };
+  };
+
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-        Eventos para el {selectedDateStr}
-      </h3>
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-sm font-bold text-slate-300">Actividades Registradas</h3>
+          <p className="text-xs text-slate-500">{selectedDateStr}</p>
+        </div>
+        <button
+          onClick={() => onOpenForm()}
+          className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Añadir
+        </button>
+      </div>
 
       {dayEvents.length === 0 ? (
-        <div className="text-center py-8 bg-slate-900/40 rounded-xl border border-dashed border-slate-800 text-slate-500">
-          <CalendarIcon className="w-8 h-8 mx-auto mb-1 opacity-40" />
-          <p className="text-xs">No hay eventos para este día.</p>
+        <div className="text-center py-6 border border-dashed border-slate-800 rounded-xl">
+          <p className="text-xs text-slate-500">No hay actividades registradas en esta fecha</p>
         </div>
       ) : (
-        dayEvents.map((event) => {
-          const sportObj = sports.find(s => s.id === event.sport);
-          const colorCfg = COLOR_MAP[sportObj?.color] || COLOR_MAP['bg-purple-500'];
+        <div className="space-y-2">
+          {dayEvents.map((ev) => {
+            const sportKey = ev.sport || ev.sportId;
+            const sportInfo = getSportInfo(sportKey);
+            const colorCfg = COLOR_MAP[sportInfo.color] || COLOR_MAP['bg-purple-500'];
 
-          return (
-            <div
-              key={event.id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex justify-between items-start gap-3"
-            >
-              <div className="space-y-1.5 flex-1">
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border inline-flex items-center gap-1 ${colorCfg.bg}/20 ${colorCfg.text} ${colorCfg.border}/30`}>
-                  <Tag className="w-3 h-3" />
-                  {sportObj?.emoji || '🔥'} {sportObj?.label || 'Actividad'}
-                </span>
-                <h4 className="font-semibold text-white text-base">{event.title}</h4>
-                <p className="text-xs text-slate-400 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  {event.time} hs
-                </p>
-                {event.notes && <p className="text-xs text-slate-400 pt-1 border-t border-slate-800/60 mt-2">{event.notes}</p>}
-              </div>
-
-              <button
-                onClick={() => onDeleteEvent(event.id, event.title)}
-                className="text-slate-500 hover:text-red-400 transition-colors p-1"
-                title="Eliminar evento"
+            return (
+              <div
+                key={ev.id}
+                className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between gap-3 hover:border-slate-700 transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        })
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`text-xl p-2 rounded-xl bg-slate-900 border ${colorCfg.border}`}>
+                    {sportInfo.emoji}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">{sportInfo.label}</p>
+                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-500" />
+                        {ev.duration} min
+                      </span>
+                      {ev.notes && (
+                        <span className="flex items-center gap-1 truncate max-w-[150px]">
+                          <FileText className="w-3 h-3 text-slate-500" />
+                          {ev.notes}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => onEditEvent(ev)}
+                    className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 rounded-lg transition-colors"
+                    title="Editar actividad"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteEvent(ev.id)}
+                    className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                    title="Eliminar actividad"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
-    </section>
+    </div>
   );
 }
