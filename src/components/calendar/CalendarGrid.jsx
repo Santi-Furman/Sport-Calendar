@@ -1,4 +1,3 @@
-// src/components/calendar/CalendarGrid.jsx
 import React from 'react';
 import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import { MONTH_NAMES, DAY_NAMES, getDaysInMonth } from '../../utils/dateUtils';
@@ -20,6 +19,13 @@ export default function CalendarGrid({
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  // Función auxiliar para obtener el objeto del deporte de forma limpia
+  const getSportObject = (event) => {
+    if (!event) return null;
+    const key = event.sport || event.sportId || event.type;
+    return sports.find(s => s.id === key || s.label?.toLowerCase() === key?.toLowerCase()) || null;
+  };
 
   return (
     <div className="space-y-4">
@@ -77,12 +83,12 @@ export default function CalendarGrid({
             let dayStyle = "bg-slate-950/40 text-slate-300 hover:bg-slate-800/80 border border-transparent";
 
             if (hasEvents) {
-              // Buscar el deporte soportando tanto 'sport' como 'sportId' por compatibilidad
-              const firstEventSportKey = dayEvents[0].sport || dayEvents[0].sportId;
-              const sportObj = sports.find(s => s.id === firstEventSportKey);
-              const colorCfg = COLOR_MAP[sportObj?.color] || COLOR_MAP['bg-purple-500'];
-              
-              dayStyle = `${colorCfg.bg}/20 text-white border ${colorCfg.border}/30`;
+              const sportObj = getSportObject(dayEvents[0]);
+              const colorKey = sportObj?.color || 'bg-purple-500';
+              const colorCfg = COLOR_MAP[colorKey] || COLOR_MAP['bg-purple-500'];
+
+              // Aplicamos las clases directas sin concatenar opacity opaca sobre Tailwind
+              dayStyle = `bg-slate-900 ${colorCfg.text} border ${colorCfg.border}`;
             }
 
             if (isSelected) {
@@ -99,8 +105,7 @@ export default function CalendarGrid({
                 {hasEvents && (
                   <div className="flex items-center justify-center gap-0.5 text-sm overflow-hidden w-full">
                     {dayEvents.slice(0, 2).map((ev, idx) => {
-                      const sportKey = ev.sport || ev.sportId;
-                      const sportObj = sports.find(s => s.id === sportKey);
+                      const sportObj = getSportObject(ev);
                       return <span key={idx}>{sportObj?.emoji || '🏆'}</span>;
                     })}
                   </div>
