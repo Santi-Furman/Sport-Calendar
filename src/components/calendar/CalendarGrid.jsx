@@ -1,3 +1,4 @@
+// src/components/calendar/CalendarGrid.jsx
 import React from 'react';
 import { ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import { MONTH_NAMES, DAY_NAMES, getDaysInMonth } from '../../utils/dateUtils';
@@ -76,9 +77,11 @@ export default function CalendarGrid({
             let dayStyle = "bg-slate-950/40 text-slate-300 hover:bg-slate-800/80 border border-transparent";
 
             if (hasEvents) {
-              const firstSportId = dayEvents[0].sport;
-              const sportObj = sports.find(s => s.id === firstSportId) || sports[0];
+              // Buscar el deporte soportando tanto 'sport' como 'sportId' por compatibilidad
+              const firstEventSportKey = dayEvents[0].sport || dayEvents[0].sportId;
+              const sportObj = sports.find(s => s.id === firstEventSportKey);
               const colorCfg = COLOR_MAP[sportObj?.color] || COLOR_MAP['bg-purple-500'];
+              
               dayStyle = `${colorCfg.bg}/20 text-white border ${colorCfg.border}/30`;
             }
 
@@ -96,8 +99,9 @@ export default function CalendarGrid({
                 {hasEvents && (
                   <div className="flex items-center justify-center gap-0.5 text-sm overflow-hidden w-full">
                     {dayEvents.slice(0, 2).map((ev, idx) => {
-                      const sportObj = sports.find(s => s.id === ev.sport);
-                      return <span key={idx}>{sportObj?.emoji || '🔥'}</span>;
+                      const sportKey = ev.sport || ev.sportId;
+                      const sportObj = sports.find(s => s.id === sportKey);
+                      return <span key={idx}>{sportObj?.emoji || '🏆'}</span>;
                     })}
                   </div>
                 )}
